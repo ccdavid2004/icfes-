@@ -1,25 +1,35 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "PREP ICFES",
+    "slug": "prepicfes",
     "version": "1.0.0",
-    "scheme": "icfesapp", 
+    "scheme": "prepicfes",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/icon-v2.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash-v2.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0F1E"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.preicfes.app"
     },
     "android": {
+      "package": "com.preicfes.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
+        "backgroundColor": "#0A0F1E",
+        "foregroundImage": "./assets/android-icon-foreground-v2.png",
+        "backgroundImage": "./assets/android-icon-background-v2.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon-v2.png"
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ]
   }
 }

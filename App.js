@@ -14,8 +14,17 @@ import PantallaPrincipal from './src/pantallas/PantallaPrincipal';
 import PantallaProgreso from './src/pantallas/PantallaProgreso';
 import PantallaSimulacros from './src/pantallas/PantallaSimulacros';
 import MotorSimulacro from './src/pantallas/MotorSimulacro';
+import MotorMateria from './src/pantallas/MotorMateria';
+import PantallaAjustes from './src/pantallas/PantallaAjustes';
+import PantallaRacha from './src/pantallas/PantallaRacha';
+import PantallaPerfil from './src/pantallas/PantallaPerfil';
+import PantallaApariencia from './src/pantallas/PantallaApariencia';
+import PantallaAyudaSoporte from './src/pantallas/PantallaAyudaSoporte';
+import PantallaNotificaciones from './src/pantallas/PantallaNotificaciones';
 // 2. Importamos la NUEVA pantalla de Onboarding
 import PantallaOnboarding from './src/pantallas/PantallaOnboarding';
+import { ThemeProvider, useTheme } from './src/contextos/ThemeContext';
+import { solicitarPermisos, enviarBienvenida, obtenerPreferencias, programarRecordatorioRacha } from './src/servicios/ServicioNotificaciones';
 
 const Stack = createNativeStackNavigator();
 
@@ -29,10 +38,11 @@ const linking = {
   },
 };
 
-export default function App() {
+function AppContent() {
+  const { animationsEnabled } = useTheme();
   const [sesion, setSesion] = useState(null);
   const [cargando, setCargando] = useState(true);
-  
+
   // Nuevo estado para saber si ya llenó sus metas
   const [onboardingCompletado, setOnboardingCompletado] = useState(false);
 
@@ -41,7 +51,7 @@ export default function App() {
     const verificarSesionInicial = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSesion(session);
-      
+
       if (session) {
         // Si hay sesión, validamos si ya hizo el onboarding
         await verificarOnboarding(session.user.id);
@@ -55,7 +65,7 @@ export default function App() {
     // 2. Escuchar en tiempo real si el usuario inicia o cierra sesión
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, sessionActiva) => {
       setSesion(sessionActiva);
-      
+
       if (sessionActiva) {
         setCargando(true);
         await verificarOnboarding(sessionActiva.user.id);
@@ -74,17 +84,39 @@ export default function App() {
     try {
       const { data, error } = await supabase
         .from('usuarios')
-        .select('onboarding_completado')
+        .select('onboarding_completado, nombre')
         .eq('id', userId)
         .single();
-        
+
       if (!error && data) {
         setOnboardingCompletado(data.onboarding_completado);
+        
+        // Inicializar notificaciones al entrar
+        inicializarNotificaciones(data.nombre);
       }
     } catch (error) {
       console.log('Error verificando onboarding:', error.message);
     } finally {
       setCargando(false);
+    }
+  };
+
+  // Inicializa notificaciones: pide permisos, envía bienvenida y programa racha
+  const inicializarNotificaciones = async (nombreUsuario) => {
+    try {
+      const concedido = await solicitarPermisos();
+      if (!concedido) return;
+
+      // Enviar notificación de bienvenida (solo la primera vez)
+      await enviarBienvenida(nombreUsuario);
+
+      // Programar recordatorio de racha según preferencias guardadas
+      const prefs = await obtenerPreferencias();
+      if (prefs.recordatorioActivo) {
+        await programarRecordatorioRacha(prefs.hora, prefs.minuto);
+      }
+    } catch (error) {
+      console.log('Error inicializando notificaciones:', error.message);
     }
   };
 
@@ -98,9 +130,9 @@ export default function App() {
   }
 
   return (
-   <NavigationContainer linking={linking}>
-      <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-        
+    <NavigationContainer linking={linking}>
+      <Stack.Navigator screenOptions={{ headerShown: false, animation: animationsEnabled ? 'slide_from_right' : 'none' }}>
+
         {!sesion ? (
           // FLUJO 1: NO HAY SESIÓN 
           <>
@@ -121,11 +153,26 @@ export default function App() {
             <Stack.Screen name="PantallaProgreso" component={PantallaProgreso} />
             <Stack.Screen name="PantallaSimulacros" component={PantallaSimulacros} />
             <Stack.Screen name="MotorSimulacro" component={MotorSimulacro} />
+            <Stack.Screen name="MotorMateria" component={MotorMateria} />
+            <Stack.Screen name="PantallaAjustes" component={PantallaAjustes} />
+            <Stack.Screen name="PantallaRacha" component={PantallaRacha} />
+            <Stack.Screen name="PantallaPerfil" component={PantallaPerfil} />
+            <Stack.Screen name="PantallaApariencia" component={PantallaApariencia} />
+            <Stack.Screen name="PantallaAyudaSoporte" component={PantallaAyudaSoporte} />
+            <Stack.Screen name="PantallaNotificaciones" component={PantallaNotificaciones} />
           </>
         )}
 
       </Stack.Navigator>
     </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 
