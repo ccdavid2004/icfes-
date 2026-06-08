@@ -6,8 +6,11 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colores } from '../tema/colores';
+import RachaFlotante from '../componentes/RachaFlotante';
+import { useTheme } from '../contextos/ThemeContext';
 
 export default function PantallaSimulacros({ navigation }) {
+  const { colors, primaryColor, fontSizeScale } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   
   // Estados para los selectores de los simulacros cortos
@@ -24,17 +27,17 @@ export default function PantallaSimulacros({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={estilos.areaSegura} edges={['top']}>
+    <SafeAreaView style={[estilos.areaSegura, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={estilos.contenedorScroll}>
         
         {/* ENCABEZADO */}
         <View style={estilos.encabezado}>
-          <Text style={estilos.titulo}>Simulacros</Text>
-          <Text style={estilos.subtitulo}>Ponte a prueba. Elige tu nivel de entrenamiento para hoy.</Text>
+          <Text style={[estilos.titulo, { color: colors.text, fontSize: 32 * fontSizeScale }]}>Simulacros</Text>
+          <Text style={[estilos.subtitulo, { color: colors.textSecondary, fontSize: 16 * fontSizeScale }]}>Ponte a prueba. Elige tu nivel de entrenamiento para hoy.</Text>
         </View>
 
         {/* TARJETA NIVEL FÁCIL */}
-        <View style={estilos.tarjetaContenedor}>
+        <View style={[estilos.tarjetaContenedor, { backgroundColor: colors.card, shadowColor: colors.border }]}>
           <View style={[estilos.bordeColor, { backgroundColor: '#10B981' }]} />
           <View style={estilos.tarjetaInterior}>
             <View style={estilos.headerTarjeta}>
@@ -42,8 +45,8 @@ export default function PantallaSimulacros({ navigation }) {
                 <Ionicons name="leaf" size={24} color="#059669" />
               </View>
               <View style={estilos.textosHeader}>
-                <Text style={estilos.tituloNivel}>Fácil (Práctica Rápida)</Text>
-                <Text style={estilos.descNivel}>Preguntas aleatorias • Nivel Básico</Text>
+                <Text style={[estilos.tituloNivel, { color: colors.text, fontSize: 18 * fontSizeScale }]}>Fácil (Práctica Rápida)</Text>
+                <Text style={[estilos.descNivel, { color: colors.textSecondary, fontSize: 13 * fontSizeScale }]}>Preguntas aleatorias • Nivel Básico</Text>
               </View>
             </View>
             
@@ -73,7 +76,7 @@ export default function PantallaSimulacros({ navigation }) {
         </View>
 
         {/* TARJETA NIVEL MEDIO */}
-        <View style={estilos.tarjetaContenedor}>
+        <View style={[estilos.tarjetaContenedor, { backgroundColor: colors.card, shadowColor: colors.border }]}>
           <View style={[estilos.bordeColor, { backgroundColor: '#F97316' }]} />
           <View style={estilos.tarjetaInterior}>
             <View style={estilos.headerTarjeta}>
@@ -81,8 +84,8 @@ export default function PantallaSimulacros({ navigation }) {
                 <Ionicons name="flame" size={24} color="#EA580C" />
               </View>
               <View style={estilos.textosHeader}>
-                <Text style={estilos.tituloNivel}>Medio (Desafío)</Text>
-                <Text style={estilos.descNivel}>Exigencia moderada • Mayor enfoque</Text>
+                <Text style={[estilos.tituloNivel, { color: colors.text, fontSize: 18 * fontSizeScale }]}>Medio (Desafío)</Text>
+                <Text style={[estilos.descNivel, { color: colors.textSecondary, fontSize: 13 * fontSizeScale }]}>Exigencia moderada • Mayor enfoque</Text>
               </View>
             </View>
             
@@ -112,8 +115,8 @@ export default function PantallaSimulacros({ navigation }) {
         </View>
 
         {/* TARJETA NIVEL DIFÍCIL (SIMULACRO ICFES) */}
-        <TouchableOpacity activeOpacity={0.9} style={estilos.tarjetaContenedorPrincipal}>
-          <LinearGradient colors={['#4648d4', '#6366f1']} style={estilos.gradienteIcfes} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <TouchableOpacity activeOpacity={0.9} style={[estilos.tarjetaContenedorPrincipal, { shadowColor: primaryColor }]}>
+          <LinearGradient colors={[primaryColor, primaryColor + 'D0']} style={estilos.gradienteIcfes} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             
             <View style={estilos.badgeRecomendado}>
               <Ionicons name="star" size={12} color="#F59E0B" />
@@ -149,8 +152,8 @@ export default function PantallaSimulacros({ navigation }) {
               </TouchableOpacity>
               
               <TouchableOpacity style={estilos.btnIniciarIcfes} onPress={() => iniciarSimulacro('ICFES', 254)}>
-                <Text style={estilos.textoBtnIniciarIcfes}>Empezar Sesión 1</Text>
-                <Ionicons name="arrow-forward" size={16} color="#4648d4" style={{ marginLeft: 6 }} />
+                <Text style={[estilos.textoBtnIniciarIcfes, { color: primaryColor }]}>Empezar Sesión 1</Text>
+                <Ionicons name="arrow-forward" size={16} color={primaryColor} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             </View>
 
@@ -162,36 +165,36 @@ export default function PantallaSimulacros({ navigation }) {
       {/* MODAL CON LA ESTRUCTURA DEL ICFES */}
       <Modal visible={modalVisible} animationType="slide" transparent={true} onRequestClose={() => setModalVisible(false)}>
         <View style={estilos.modalFondo}>
-          <View style={estilos.modalContenedor}>
+          <View style={[estilos.modalContenedor, { backgroundColor: colors.background }]}>
             <View style={estilos.modalHeader}>
-              <Text style={estilos.modalTitulo}>Estructura ICFES Saber 11</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={estilos.btnCerrarModal}>
-                <Ionicons name="close" size={24} color="#64748B" />
+              <Text style={[estilos.modalTitulo, { color: colors.text, fontSize: 22 * fontSizeScale }]}>Estructura ICFES Saber 11</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={[estilos.btnCerrarModal, { backgroundColor: colors.card }]}>
+                <Ionicons name="close" size={24} color={colors.iconSecondary} />
               </TouchableOpacity>
             </View>
             
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={estilos.modalSeccion}>Sesión 1 (Mañana) - 4h 30m</Text>
-              <View style={estilos.modalTabla}>
-                <Text style={estilos.modalTextoTabla}>• Matemáticas 1: <Text style={{fontWeight: 'bold'}}>25</Text></Text>
-                <Text style={estilos.modalTextoTabla}>• Lectura Crítica: <Text style={{fontWeight: 'bold'}}>41</Text></Text>
-                <Text style={estilos.modalTextoTabla}>• Sociales y Ciudadanas 1: <Text style={{fontWeight: 'bold'}}>25</Text></Text>
-                <Text style={estilos.modalTextoTabla}>• Ciencias Naturales 1: <Text style={{fontWeight: 'bold'}}>29</Text></Text>
-                <Text style={[estilos.modalTextoTabla, estilos.modalTotal]}>Total Sesión 1: 120 preguntas</Text>
+              <Text style={[estilos.modalSeccion, { color: primaryColor, fontSize: 18 * fontSizeScale }]}>Sesión 1 (Mañana) - 4h 30m</Text>
+              <View style={[estilos.modalTabla, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[estilos.modalTextoTabla, { color: colors.textSecondary }]}>• Matemáticas 1: <Text style={{fontWeight: 'bold'}}>25</Text></Text>
+                <Text style={[estilos.modalTextoTabla, { color: colors.textSecondary }]}>• Lectura Crítica: <Text style={{fontWeight: 'bold'}}>41</Text></Text>
+                <Text style={[estilos.modalTextoTabla, { color: colors.textSecondary }]}>• Sociales y Ciudadanas 1: <Text style={{fontWeight: 'bold'}}>25</Text></Text>
+                <Text style={[estilos.modalTextoTabla, { color: colors.textSecondary }]}>• Ciencias Naturales 1: <Text style={{fontWeight: 'bold'}}>29</Text></Text>
+                <Text style={[estilos.modalTextoTabla, estilos.modalTotal, { color: colors.text, borderTopColor: colors.border }]}>Total Sesión 1: 120 preguntas</Text>
               </View>
 
-              <Text style={estilos.modalSeccion}>Sesión 2 (Tarde) - 4h 30m</Text>
-              <View style={estilos.modalTabla}>
-                <Text style={estilos.modalTextoTabla}>• Sociales y Ciudadanas 2: <Text style={{fontWeight: 'bold'}}>25</Text></Text>
-                <Text style={estilos.modalTextoTabla}>• Matemáticas 2: <Text style={{fontWeight: 'bold'}}>25</Text></Text>
-                <Text style={estilos.modalTextoTabla}>• Ciencias Naturales 2: <Text style={{fontWeight: 'bold'}}>29</Text></Text>
-                <Text style={estilos.modalTextoTabla}>• Inglés: <Text style={{fontWeight: 'bold'}}>45-55</Text></Text>
-                <Text style={[estilos.modalTextoTabla, estilos.modalTotal]}>Total Sesión 2: ~134 preguntas</Text>
+              <Text style={[estilos.modalSeccion, { color: primaryColor, fontSize: 18 * fontSizeScale }]}>Sesión 2 (Tarde) - 4h 30m</Text>
+              <View style={[estilos.modalTabla, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[estilos.modalTextoTabla, { color: colors.textSecondary }]}>• Sociales y Ciudadanas 2: <Text style={{fontWeight: 'bold'}}>25</Text></Text>
+                <Text style={[estilos.modalTextoTabla, { color: colors.textSecondary }]}>• Matemáticas 2: <Text style={{fontWeight: 'bold'}}>25</Text></Text>
+                <Text style={[estilos.modalTextoTabla, { color: colors.textSecondary }]}>• Ciencias Naturales 2: <Text style={{fontWeight: 'bold'}}>29</Text></Text>
+                <Text style={[estilos.modalTextoTabla, { color: colors.textSecondary }]}>• Inglés: <Text style={{fontWeight: 'bold'}}>45-55</Text></Text>
+                <Text style={[estilos.modalTextoTabla, estilos.modalTotal, { color: colors.text, borderTopColor: colors.border }]}>Total Sesión 2: ~134 preguntas</Text>
               </View>
 
-              <View style={estilos.modalInfoExtra}>
-                <Ionicons name="information-circle" size={20} color="#4648d4" />
-                <Text style={estilos.modalTextoExtra}>El puntaje global va de 0 a 500 puntos. 350+ es Muy Bueno y 450+ es Nivel Élite.</Text>
+              <View style={[estilos.modalInfoExtra, { backgroundColor: primaryColor + '15' }]}>
+                <Ionicons name="information-circle" size={20} color={primaryColor} />
+                <Text style={[estilos.modalTextoExtra, { color: primaryColor }]}>El puntaje global va de 0 a 500 puntos. 350+ es Muy Bueno y 450+ es Nivel Élite.</Text>
               </View>
             </ScrollView>
           </View>
@@ -199,35 +202,36 @@ export default function PantallaSimulacros({ navigation }) {
       </Modal>
 
       {/* BARRA DE NAVEGACIÓN INFERIOR */}
-      <View style={estilos.barraNavegacion}>
+      <View style={[estilos.barraNavegacion, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
         <TouchableOpacity style={estilos.itemNav} onPress={() => navigation.replace('PantallaPrincipal')}>
-          <Ionicons name="home-outline" size={24} color="#9CA3AF" />
-          <Text style={estilos.textoNav}>Inicio</Text>
+          <Ionicons name="home-outline" size={24} color={colors.iconSecondary} />
+          <Text style={[estilos.textoNav, { color: colors.iconSecondary }]}>Inicio</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={estilos.itemNav} onPress={() => navigation.replace('PantallaProgreso')}>
-          <Ionicons name="trending-up-outline" size={24} color="#9CA3AF" />
-          <Text style={estilos.textoNav}>Progreso</Text>
+          <Ionicons name="trending-up-outline" size={24} color={colors.iconSecondary} />
+          <Text style={[estilos.textoNav, { color: colors.iconSecondary }]}>Progreso</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={estilos.itemNavActivo}>
-          <View style={estilos.circuloNavActivo}>
+          <View style={[estilos.circuloNavActivo, { backgroundColor: primaryColor, shadowColor: primaryColor }]}>
             <Ionicons name="document-text" size={22} color="#FFF" />
           </View>
-          <Text style={estilos.textoNavActivo}>Simulacros</Text>
+          <Text style={[estilos.textoNavActivo, { color: primaryColor }]}>Simulacros</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={estilos.itemNav}>
-          <Ionicons name="settings-outline" size={24} color="#9CA3AF" />
-          <Text style={estilos.textoNav}>Ajustes</Text>
+        <TouchableOpacity style={estilos.itemNav} onPress={() => navigation.replace('PantallaAjustes')}>
+          <Ionicons name="settings-outline" size={24} color={colors.iconSecondary} />
+          <Text style={[estilos.textoNav, { color: colors.iconSecondary }]}>Ajustes</Text>
         </TouchableOpacity>
       </View>
+      <RachaFlotante racha={7} />
     </SafeAreaView>
   );
 }
 
 const estilos = StyleSheet.create({
-  areaSegura: { flex: 1, backgroundColor: '#F8FAFC' },
+  areaSegura: { flex: 1 },
   contenedorScroll: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 100 },
   
   encabezado: { marginBottom: 24 },

@@ -1,18 +1,23 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, ScrollView, Animated
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, ScrollView, Animated, Image
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../servicios/supabase';
 import { colores } from '../tema/colores';
+import RachaFlotante from '../componentes/RachaFlotante';
+import { useTheme } from '../contextos/ThemeContext';
 
 const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
 export default function PantallaPrincipal({ navigation }) {
+  const { colors, primaryColor, fontSizeScale, themeMode, calcularRacha } = useTheme();
+
   // 1. ESTADOS PARA LOS DATOS DINÁMICOS
   const [nombreUsuario, setNombreUsuario] = useState('');
+  const [correoUsuario, setCorreoUsuario] = useState('');
   const [carreraMeta, setCarreraMeta] = useState('Definir Carrera');
   const [universidadMeta, setUniversidadMeta] = useState('Definir Universidad');
   const [puntajeMeta, setPuntajeMeta] = useState(500);
@@ -74,7 +79,11 @@ export default function PantallaPrincipal({ navigation }) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // A. Traemos los datos de la meta
+        setCorreoUsuario(user.email);
+        // A. Actualizamos la racha global silenciosamente
+        calcularRacha();
+
+        // B. Traemos los datos de la meta
         const { data: userData } = await supabase
           .from('usuarios')
           .select('nombre, carrera_meta, universidad_meta, puntaje_meta')
@@ -132,43 +141,28 @@ export default function PantallaPrincipal({ navigation }) {
   });
 
   return (
-    <SafeAreaView style={estilos.areaSegura} edges={['top']}>
+    <SafeAreaView style={[estilos.areaSegura, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={estilos.contenedorScroll}>
         
         {/* ── ENCABEZADO UNIFICADO ── */}
         <View style={estilos.encabezado}>
           <View style={estilos.textosEncabezado}>
             <View style={estilos.filaHola}>
-              <Text style={estilos.saludo}>Hola,{'\n'}
-                <Text style={estilos.saludoNombre}>{nombreUsuario || 'Estudiante'}</Text>
+              <Text style={[estilos.saludo, { color: colors.text }]}>Hola,{'\n'}
+                <Text style={[estilos.saludoNombre, { color: primaryColor }]}>{nombreUsuario || 'Estudiante'}</Text>
               </Text>
               <Text style={estilos.emoji}>👋</Text>
             </View>
-            <Text style={estilos.subtituloMotivacion}>El éxito es la suma de pequeños esfuerzos diarios.</Text>
-          </View>
-
-          <View style={estilos.accionesEncabezado}>
-            <View style={estilos.contenedorRacha}>
-              <Ionicons name="flame" size={16} color="#FF6B35" />
-              <Text style={estilos.textoRacha}>7</Text>
-            </View>
-            <TouchableOpacity style={estilos.botonNotif} onPress={manejarCierreSesion}>
-              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-            </TouchableOpacity>
-            <View style={estilos.avatar}>
-              <LinearGradient colors={['#4648d4', '#6366f1']} style={estilos.avatarGradiente}>
-                <Text style={estilos.avatarLetra}>{(nombreUsuario || 'E').charAt(0).toUpperCase()}</Text>
-              </LinearGradient>
-            </View>
+            <Text style={[estilos.subtituloMotivacion, { color: colors.textSecondary }]}>El éxito es la suma de pequeños esfuerzos diarios.</Text>
           </View>
         </View>
 
         {/* ── TARJETA META ICFES DINÁMICA ── */}
         <Animated.View style={{ transform: [{ scale: animacionPulso }] }}>
           <AnimatedGradient
-            colors={['#4648d4', '#6366f1', '#1D4ED8']}
+            colors={[primaryColor, primaryColor + 'D0', primaryColor + '99']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={estilos.tarjetaIcfes}
+            style={[estilos.tarjetaIcfes, { shadowColor: primaryColor }]}
           >
             <View style={estilos.circuloDecorativo1} />
             <View style={estilos.circuloDecorativo2} />
@@ -228,19 +222,24 @@ export default function PantallaPrincipal({ navigation }) {
         {/* ── ÁREAS DE ESTUDIO ── */}
         <View style={estilos.seccionMaterias}>
           <View style={estilos.encabezadoSeccion}>
-            <Text style={estilos.tituloSeccion}>Áreas de Estudio</Text>
+            <Text style={[estilos.tituloSeccion, { color: colors.text }]}>Áreas de Estudio</Text>
             <TouchableOpacity>
-              <Text style={estilos.enlaceVerTodo}>Ver todas</Text>
+              <Text style={[estilos.enlaceVerTodo, { color: primaryColor }]}>Ver todas</Text>
             </TouchableOpacity>
           </View>
 
           <View style={estilos.cuadriculaMaterias}>
             {areasEstudio.map((area) => (
-              <TouchableOpacity key={area.id} style={estilos.tarjetaMateria} activeOpacity={0.8}>
+              <TouchableOpacity 
+                key={area.id} 
+                style={[estilos.tarjetaMateria, { backgroundColor: colors.card }]} 
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('MotorMateria', { materia: area.nombre })}
+              >
                 <LinearGradient colors={area.gradiente} style={estilos.iconoAreaContenedor} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                   <MaterialCommunityIcons name={area.icono} size={30} color="#FFF" />
                 </LinearGradient>
-                <Text style={estilos.nombreArea} numberOfLines={2}>{area.nombre}</Text>
+                <Text style={[estilos.nombreArea, { color: colors.text }]} numberOfLines={2}>{area.nombre}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -248,36 +247,37 @@ export default function PantallaPrincipal({ navigation }) {
       </ScrollView>
 
       {/* ── BARRA DE NAVEGACIÓN INFERIOR ── */}
-      <View style={estilos.barraNavegacion}>
+      <View style={[estilos.barraNavegacion, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
         <TouchableOpacity style={estilos.itemNavActivo}>
-          <View style={estilos.circuloNavActivo}>
+          <View style={[estilos.circuloNavActivo, { backgroundColor: primaryColor, shadowColor: primaryColor }]}>
             <Ionicons name="home" size={22} color="#FFF" />
           </View>
-          <Text style={estilos.textoNavActivo}>Inicio</Text>
+          <Text style={[estilos.textoNavActivo, { color: primaryColor }]}>Inicio</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={estilos.itemNav} onPress={() => navigation.replace('PantallaProgreso')}>
-          <Ionicons name="trending-up-outline" size={24} color="#9CA3AF" />
-          <Text style={estilos.textoNav}>Progreso</Text>
+          <Ionicons name="trending-up-outline" size={24} color={colors.iconSecondary} />
+          <Text style={[estilos.textoNav, { color: colors.iconSecondary }]}>Progreso</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={estilos.itemNav} onPress={() => navigation.replace('PantallaSimulacros')}>
-          <Ionicons name="book-outline" size={24} color="#9CA3AF" />
-          <Text style={estilos.textoNav}>Simulacros</Text>
+          <Ionicons name="book-outline" size={24} color={colors.iconSecondary} />
+          <Text style={[estilos.textoNav, { color: colors.iconSecondary }]}>Simulacros</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={estilos.itemNav}>
-          <Ionicons name="settings-outline" size={24} color="#9CA3AF" />
-          <Text style={estilos.textoNav}>Ajustes</Text>
+        <TouchableOpacity style={estilos.itemNav} onPress={() => navigation.replace('PantallaAjustes')}>
+          <Ionicons name="settings-outline" size={24} color={colors.iconSecondary} />
+          <Text style={[estilos.textoNav, { color: colors.iconSecondary }]}>Ajustes</Text>
         </TouchableOpacity>
       </View>
+      <RachaFlotante />
     </SafeAreaView>
   );
 }
 
 const estilos = StyleSheet.create({
-  areaSegura: { flex: 1, backgroundColor: '#F8FAFC' },
-  pantallaCarga: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' },
+  areaSegura: { flex: 1 },
+  pantallaCarga: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   contenedorScroll: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 100 },
   
   // ENCABEZADO
@@ -295,6 +295,9 @@ const estilos = StyleSheet.create({
   avatar: { width: 38, height: 38, borderRadius: 19, overflow: 'hidden' },
   avatarGradiente: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   avatarLetra: { color: '#FFF', fontWeight: '700', fontSize: 16 },
+  perfilMini: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2, maxWidth: 140 },
+  avatarMini: { width: 24, height: 24, borderRadius: 12, marginRight: 6 },
+  correoMini: { fontSize: 11, color: '#64748B', fontWeight: '600', flexShrink: 1 },
 
   // TARJETA ICFES
   tarjetaIcfes: { borderRadius: 28, padding: 22, marginBottom: 28, overflow: 'hidden', elevation: 10, shadowColor: '#4648d4', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 16 },

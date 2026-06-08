@@ -1,15 +1,20 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Animated, TouchableOpacity, ActivityIndicator, Platform, Modal
+  View, Text, StyleSheet, ScrollView, Animated, TouchableOpacity, ActivityIndicator, Platform, Modal, Image
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../servicios/supabase';
 import { colores } from '../tema/colores';
+import RachaFlotante from '../componentes/RachaFlotante';
+import { useTheme } from '../contextos/ThemeContext';
 
 export default function PantallaProgreso({ navigation }) {
+  const { colors, primaryColor, fontSizeScale } = useTheme();
+
   const [nombre, setNombre] = useState('');
+  const [correoUsuario, setCorreoUsuario] = useState('');
   const [puntajeMeta, setPuntajeMeta] = useState(500);
   const [cargando, setCargando] = useState(true);
   
@@ -40,6 +45,7 @@ export default function PantallaProgreso({ navigation }) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        setCorreoUsuario(user.email);
         const { data: userData } = await supabase
           .from('usuarios')
           .select('nombre, puntaje_meta')
@@ -54,13 +60,28 @@ export default function PantallaProgreso({ navigation }) {
         const { data: simulacros } = await supabase
           .from('resultados_simulacros')
           .select('*')
-          .eq('usuario_id', user.id)
-          .order('creado_en', { ascending: false });
+          .eq('usuario_id', user.id);
 
-        if (simulacros && simulacros.length > 0) {
-          setHistorial(simulacros);
-          const suma = simulacros.reduce((acc, sim) => acc + sim.puntaje_icfes, 0);
-          setPuntajePromedio(Math.round(suma / simulacros.length));
+        const { data: practicas } = await supabase
+          .from('resultados_practicas')
+          .select('*')
+          .eq('usuario_id', user.id);
+
+        const listaSimulacros = (simulacros || []).map(s => ({ ...s, tipoItem: 'simulacro' }));
+        const listaPracticas = (practicas || []).map(p => ({ ...p, tipoItem: 'practica', puntaje_icfes: Math.round((p.correctas / p.total_preguntas) * 500) }));
+
+        const combinado = [...listaSimulacros, ...listaPracticas].sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
+        
+        if (combinado.length > 0) {
+          setHistorial(combinado);
+        }
+
+        if (listaSimulacros.length > 0) {
+          const suma = listaSimulacros.reduce((acc, sim) => acc + sim.puntaje_icfes, 0);
+          const promedio = Math.round(suma / listaSimulacros.length);
+          setPuntajePromedio(promedio);
+        } else {
+          setPuntajePromedio(0);
         }
       }
     } catch (error) {
@@ -100,39 +121,24 @@ export default function PantallaProgreso({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={estilos.areaSegura} edges={['top']}>
+    <SafeAreaView style={[estilos.areaSegura, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={estilos.contenedorScroll}>
         
-        {/* ENCABEZADO GLOBAL (Título + Racha + Perfil + Salir) */}
+        {/* ENCABEZADO GLOBAL */}
         <View style={estilos.encabezado}>
           <View style={estilos.textosEncabezado}>
-            <Text style={estilos.titulo}>Tu Progreso</Text>
-            <Text style={estilos.subtitulo}>Sigue así, {nombre || 'Estudiante'}.</Text>
-          </View>
-
-          <View style={estilos.accionesEncabezado}>
-            <View style={estilos.contenedorRacha}>
-              <Ionicons name="flame" size={16} color="#FF6B35" />
-              <Text style={estilos.textoRacha}>7</Text>
-            </View>
-            <TouchableOpacity style={estilos.botonNotif} onPress={manejarCierreSesion}>
-              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-            </TouchableOpacity>
-            <View style={estilos.avatar}>
-              <LinearGradient colors={['#4648d4', '#6366f1']} style={estilos.avatarGradiente}>
-                <Text style={estilos.avatarLetra}>{(nombre || 'E').charAt(0).toUpperCase()}</Text>
-              </LinearGradient>
-            </View>
+            <Text style={[estilos.titulo, { color: colors.text, fontSize: 32 * fontSizeScale }]}>Tu Progreso</Text>
+            <Text style={[estilos.subtitulo, { color: colors.textSecondary, fontSize: 16 * fontSizeScale }]}>Sigue así, {nombre || 'Estudiante'}.</Text>
           </View>
         </View>
 
         {/* TARJETA DE PUNTAJE PROMEDIO REAL */}
-        <View style={estilos.tarjetaPrincipal}>
-          <LinearGradient colors={['#4648d4', '#6366f1']} style={estilos.gradienteTarjeta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <View style={[estilos.tarjetaPrincipal, { shadowColor: primaryColor }]}>
+          <LinearGradient colors={[primaryColor, primaryColor + 'D0']} style={estilos.gradienteTarjeta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <View style={estilos.filaTarjetaTop}>
               <View style={estilos.etiquetaPuntaje}>
-                <Ionicons name="analytics" size={14} color="#4648d4" />
-                <Text style={estilos.textoEtiqueta}>Promedio Actual</Text>
+                <Ionicons name="analytics" size={14} color={primaryColor} />
+                <Text style={[estilos.textoEtiqueta, { color: primaryColor }]}>Promedio Actual</Text>
               </View>
               <Text style={estilos.textoMeta}>Meta: {puntajeMeta}</Text>
             </View>
@@ -150,33 +156,41 @@ export default function PantallaProgreso({ navigation }) {
 
         {/* HISTORIAL Y REVISIÓN DE SIMULACROS */}
         <View style={estilos.seccion}>
-          <Text style={estilos.tituloSeccion}>Historial de Simulacros</Text>
+          <Text style={[estilos.tituloSeccion, { color: colors.text, fontSize: 20 * fontSizeScale }]}>Historial de Actividad</Text>
           
           {historial.length === 0 ? (
-            <Text style={{color: '#64748B'}}>Aún no has hecho simulacros. ¡Ve a la pestaña de Simulacros y haz el primero!</Text>
+            <Text style={{color: colors.textSecondary}}>Aún no tienes actividad. ¡Haz un simulacro o una práctica!</Text>
           ) : (
             historial.map((sim, index) => {
+              const esPractica = sim.tipoItem === 'practica';
               const fecha = new Date(sim.creado_en).toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
-              const nivelMostrar = sim.nivel || 'Fácil';
-              const colorEtiqueta = obtenerColorNivel(nivelMostrar);
+              const nivelMostrar = esPractica ? sim.materia : (sim.nivel || 'Fácil');
+              const colorEtiqueta = esPractica ? '#3B82F6' : obtenerColorNivel(nivelMostrar);
+              const titulo = esPractica ? 'Práctica' : `Simulacro ${historial.length - index}`;
 
               return (
-                <TouchableOpacity key={sim.id} style={estilos.itemHistorial} onPress={() => abrirRevision(sim)}>
-                  <View style={estilos.iconoHistorial}>
-                    <Ionicons name="document-text" size={24} color="#4648d4" />
+                <TouchableOpacity key={`${sim.tipoItem}-${sim.id}`} style={[estilos.itemHistorial, { backgroundColor: colors.card, shadowColor: colors.border }]} onPress={() => abrirRevision(sim)}>
+                  <View style={[estilos.iconoHistorial, { backgroundColor: primaryColor + '15' }]}>
+                    <Ionicons name={esPractica ? "book" : "document-text"} size={24} color={primaryColor} />
                   </View>
                   <View style={estilos.infoHistorial}>
                     <View style={estilos.filaTituloHistorial}>
-                      <Text style={estilos.tituloHistorial}>Simulacro {historial.length - index}</Text>
+                      <Text style={[estilos.tituloHistorial, { color: colors.text, fontSize: 16 * fontSizeScale }]}>{titulo}</Text>
                       <View style={[estilos.badgeNivel, { backgroundColor: colorEtiqueta + '20' }]}>
                         <Text style={[estilos.textoBadgeNivel, { color: colorEtiqueta }]}>{nivelMostrar}</Text>
                       </View>
                     </View>
-                    <Text style={estilos.fechaHistorial}>{fecha} • {sim.correctas}/{sim.total_preguntas} correctas</Text>
+                    <Text style={[estilos.fechaHistorial, { color: colors.textSecondary }]}>{fecha} • {sim.correctas}/{sim.total_preguntas} correctas</Text>
                   </View>
-                  <View style={estilos.puntajeHistorialContainer}>
-                    <Text style={estilos.puntajeHistorial}>{sim.puntaje_icfes}</Text>
-                    <Text style={estilos.ptsHistorial}>Pts</Text>
+                  <View style={[estilos.puntajeHistorialContainer, { backgroundColor: colors.background }]}>
+                    {esPractica ? (
+                      <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                    ) : (
+                      <>
+                        <Text style={[estilos.puntajeHistorial, { color: primaryColor }]}>{sim.puntaje_icfes}</Text>
+                        <Text style={[estilos.ptsHistorial, { color: colors.iconSecondary }]}>Pts</Text>
+                      </>
+                    )}
                   </View>
                 </TouchableOpacity>
               )
@@ -187,32 +201,51 @@ export default function PantallaProgreso({ navigation }) {
 
       {/* MODAL DE REVISIÓN DEL EXAMEN */}
       <Modal visible={modalRevision} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalRevision(false)}>
-        <SafeAreaView style={{flex: 1, backgroundColor: '#F8FAFC'}}>
-          <View style={estilos.modalHeader}>
-            <Text style={estilos.modalTitulo}>Revisión del Examen</Text>
-            <TouchableOpacity onPress={() => setModalRevision(false)} style={estilos.btnCerrarModal}>
-              <Ionicons name="close" size={24} color="#0F172A" />
+        <SafeAreaView style={{flex: 1, backgroundColor: colors.background }}>
+          <View style={[estilos.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+            <Text style={[estilos.modalTitulo, { color: colors.text, fontSize: 20 * fontSizeScale }]}>
+              Revisión - {simulacroSeleccionado?.tipoItem === 'practica' ? simulacroSeleccionado?.materia : (simulacroSeleccionado?.nivel || 'Simulacro')}
+            </Text>
+            <TouchableOpacity onPress={() => setModalRevision(false)} style={[estilos.btnCerrarModal, { backgroundColor: colors.background }]}>
+              <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 
           <ScrollView contentContainerStyle={{padding: 20}}>
-            <View style={estilos.resumenModal}>
-              <Text style={estilos.textoResumenModal}>Puntaje ICFES: {simulacroSeleccionado?.puntaje_icfes}</Text>
-              <Text style={{color: '#E0E7FF', marginTop: 4}}>Nivel: {simulacroSeleccionado?.nivel || 'Fácil'}</Text>
+            <View style={[estilos.resumenModal, { backgroundColor: simulacroSeleccionado?.tipoItem === 'practica' ? '#3B82F6' : primaryColor }]}>
+              {simulacroSeleccionado?.tipoItem === 'practica' ? (
+                <>
+                  <Text style={estilos.textoResumenModal}>Aciertos: {simulacroSeleccionado?.correctas} / {simulacroSeleccionado?.total_preguntas}</Text>
+                  <Text style={{color: 'rgba(255,255,255,0.8)', marginTop: 4}}>Materia: {simulacroSeleccionado?.materia}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={estilos.textoResumenModal}>Puntaje ICFES: {simulacroSeleccionado?.puntaje_icfes}</Text>
+                  <Text style={{color: 'rgba(255,255,255,0.8)', marginTop: 4}}>Nivel: {simulacroSeleccionado?.nivel || 'Fácil'}</Text>
+                </>
+              )}
             </View>
 
             {simulacroSeleccionado?.detalle_respuestas?.map((resp, idx) => {
-              const esCorrecta = resp.seleccionada === resp.correcta;
+              let esCorrecta = false;
+              if (resp.seleccionada !== 'Ninguna') {
+                const letraSeleccionada = resp.seleccionada.trim().toUpperCase();
+                const correctaDB = String(resp.correcta || '').trim();
+                esCorrecta = (letraSeleccionada === correctaDB.toUpperCase()) || 
+                             (resp.texto_opcion_seleccionada && resp.texto_opcion_seleccionada.trim().toLowerCase() === correctaDB.toLowerCase());
+                // Fallback de seguridad si en detalle_respuestas se guardó que esCorrecta (aunque no lo guardamos explícitamente como booleano antes)
+                if(!esCorrecta && letraSeleccionada === correctaDB) esCorrecta = true;
+              }
               return (
-                <View key={idx} style={[estilos.tarjetaRevision, { borderColor: esCorrecta ? '#10B981' : '#EF4444' }]}>
+                <View key={idx} style={[estilos.tarjetaRevision, { backgroundColor: colors.card, borderColor: esCorrecta ? '#10B981' : '#EF4444' }]}>
                   <View style={estilos.headerRevision}>
-                    <Text style={estilos.badgeMateriaRevision}>{resp.materia}</Text>
+                    <Text style={[estilos.badgeMateriaRevision, { backgroundColor: colors.background, color: colors.textSecondary }]}>{resp.materia}</Text>
                     <Ionicons name={esCorrecta ? "checkmark-circle" : "close-circle"} size={24} color={esCorrecta ? '#10B981' : '#EF4444'} />
                   </View>
                   
-                  <Text style={estilos.preguntaRevision}>{idx + 1}. {resp.pregunta}</Text>
+                  <Text style={[estilos.preguntaRevision, { color: colors.text }]}>{idx + 1}. {resp.pregunta}</Text>
                   
-                  <Text style={estilos.textoTuRespuesta}>
+                  <Text style={[estilos.textoTuRespuesta, { color: colors.textSecondary }]}>
                     Tu respuesta: <Text style={{color: esCorrecta ? '#10B981' : '#EF4444', fontWeight: 'bold'}}>{resp.seleccionada}</Text>
                   </Text>
                   
@@ -234,33 +267,34 @@ export default function PantallaProgreso({ navigation }) {
       </Modal>
 
       {/* BARRA DE NAVEGACIÓN INFERIOR */}
-      <View style={estilos.barraNavegacion}>
+      <View style={[estilos.barraNavegacion, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
         <TouchableOpacity style={estilos.itemNav} onPress={() => navigation.replace('PantallaPrincipal')}>
-          <Ionicons name="home-outline" size={24} color="#9CA3AF" />
-          <Text style={estilos.textoNav}>Inicio</Text>
+          <Ionicons name="home-outline" size={24} color={colors.iconSecondary} />
+          <Text style={[estilos.textoNav, { color: colors.iconSecondary }]}>Inicio</Text>
         </TouchableOpacity>
         <TouchableOpacity style={estilos.itemNavActivo}>
-          <View style={estilos.circuloNavActivo}>
+          <View style={[estilos.circuloNavActivo, { backgroundColor: primaryColor, shadowColor: primaryColor }]}>
             <Ionicons name="trending-up" size={22} color="#FFF" />
           </View>
-          <Text style={estilos.textoNavActivo}>Progreso</Text>
+          <Text style={[estilos.textoNavActivo, { color: primaryColor }]}>Progreso</Text>
         </TouchableOpacity>
         <TouchableOpacity style={estilos.itemNav} onPress={() => navigation.replace('PantallaSimulacros')}>
-          <Ionicons name="book-outline" size={24} color="#9CA3AF" />
-          <Text style={estilos.textoNav}>Simulacros</Text>
+          <Ionicons name="book-outline" size={24} color={colors.iconSecondary} />
+          <Text style={[estilos.textoNav, { color: colors.iconSecondary }]}>Simulacros</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={estilos.itemNav}>
-          <Ionicons name="settings-outline" size={24} color="#9CA3AF" />
-          <Text style={estilos.textoNav}>Ajustes</Text>
+        <TouchableOpacity style={estilos.itemNav} onPress={() => navigation.replace('PantallaAjustes')}>
+          <Ionicons name="settings-outline" size={24} color={colors.iconSecondary} />
+          <Text style={[estilos.textoNav, { color: colors.iconSecondary }]}>Ajustes</Text>
         </TouchableOpacity>
       </View>
+      <RachaFlotante />
     </SafeAreaView>
   );
 }
 
 const estilos = StyleSheet.create({
-  areaSegura: { flex: 1, backgroundColor: '#F8FAFC' },
-  pantallaCarga: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' },
+  areaSegura: { flex: 1 },
+  pantallaCarga: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   contenedorScroll: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 100 },
   
   // ESTILOS DEL ENCABEZADO GLOBAL
@@ -275,6 +309,9 @@ const estilos = StyleSheet.create({
   avatar: { width: 38, height: 38, borderRadius: 19, overflow: 'hidden' },
   avatarGradiente: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   avatarLetra: { color: '#FFF', fontWeight: '700', fontSize: 16 },
+  perfilMini: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2, maxWidth: 140 },
+  avatarMini: { width: 24, height: 24, borderRadius: 12, marginRight: 6 },
+  correoMini: { fontSize: 11, color: '#64748B', fontWeight: '600', flexShrink: 1 },
 
   tarjetaPrincipal: { borderRadius: 24, shadowColor: '#4648d4', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 10, marginBottom: 32 },
   gradienteTarjeta: { borderRadius: 24, padding: 24 },

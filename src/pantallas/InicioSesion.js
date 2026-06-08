@@ -108,26 +108,7 @@ export default function InicioSesion({ navigation }) {
               </Text>
             </TouchableOpacity>
             
-            <View style={estilos.contenedorSso}>
-               <View style={estilos.contenedorDivisor}>
-                 <View style={estilos.divisor} />
-                 <Text style={estilos.textoSso}>O ingresa con</Text>
-                 <View style={estilos.divisor} />
-               </View>
-               
-               <View style={estilos.botonesSso}>
-                  <TouchableOpacity style={estilos.botonSso} activeOpacity={0.7}>
-                      <Ionicons name="logo-google" size={20} color={colores.textoPrincipal} />
-                      <Text style={estilos.textoBotonSso}>Google</Text>
-                  </TouchableOpacity>
-                  {Platform.OS === 'ios' && (
-                      <TouchableOpacity style={estilos.botonSso} activeOpacity={0.7}>
-                          <Ionicons name="logo-apple" size={20} color={colores.textoPrincipal} />
-                          <Text style={estilos.textoBotonSso}>Apple</Text>
-                      </TouchableOpacity>
-                  )}
-               </View>
-            </View>
+
 
             <View style={estilos.piePagina}>
               <Text style={estilos.textoPiePagina}>¿No tienes una cuenta? </Text>

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../servicios/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
+import CelebracionMeta from '../componentes/CelebracionMeta';
 
 export default function MotorSimulacro({ route, navigation }) {
   // Recibimos parámetros de la pantalla anterior (nivel, cantidad de preguntas, etc.)
@@ -25,6 +26,11 @@ export default function MotorSimulacro({ route, navigation }) {
   
   // Temporizador en segundos
   const [tiempoRestante, setTiempoRestante] = useState(tiempoMinutos * 60);
+
+  // Celebración de Meta
+  const [puntajeMeta, setPuntajeMeta] = useState(500);
+  const [mostrarCelebracion, setMostrarCelebracion] = useState(false);
+  const [puntajeFinal, setPuntajeFinal] = useState(0);
 
   useEffect(() => {
     cargarPreguntas();
@@ -48,6 +54,16 @@ export default function MotorSimulacro({ route, navigation }) {
 
   const cargarPreguntas = async () => {
     try {
+      // 1. Obtener meta del usuario
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: userData } = await supabase.from('usuarios').select('puntaje_meta').eq('id', user.id).maybeSingle();
+        if (userData && userData.puntaje_meta) {
+          setPuntajeMeta(userData.puntaje_meta);
+        }
+      }
+
+      // 2. Cargar preguntas
       const { data, error } = await supabase
         .from('preguntas')
         .select('*')
@@ -74,10 +90,12 @@ export default function MotorSimulacro({ route, navigation }) {
 
   const avanzarPregunta = () => {
     // Guardamos la respuesta del usuario
-    setRespuestasUsuario({
+    const nuevasRespuestas = {
       ...respuestasUsuario,
       [preguntas[indiceActual].id]: opcionSeleccionada
-    });
+    };
+    
+    setRespuestasUsuario(nuevasRespuestas);
 
     // Limpiamos la selección para la siguiente pregunta
     setOpcionSeleccionada(null);
@@ -86,23 +104,32 @@ export default function MotorSimulacro({ route, navigation }) {
     if (indiceActual < preguntas.length - 1) {
       setIndiceActual(indiceActual + 1);
     } else {
-      finalizarExamen();
+      finalizarExamen(nuevasRespuestas);
     }
   };
 
-const finalizarExamen = async () => {
+const finalizarExamen = async (respuestasFinales = respuestasUsuario) => {
     setCargando(true);
-    const correctas = calcularPuntaje();
+    const correctas = calcularPuntaje(respuestasFinales);
     
     const puntajeIcfes = Math.round((correctas / preguntas.length) * 500);
+    setPuntajeFinal(puntajeIcfes);
 
-    const reporteDetallado = preguntas.map((p) => ({
-      pregunta: p.texto_pregunta,
-      materia: p.materia,
-      correcta: p.respuesta_correcta,
-      seleccionada: respuestasUsuario[p.id] || 'Ninguna',
-      justificacion: p.justificacion
-    }));
+    // Solo se activa si es el examen global ICFES
+    if (nivelSimulacro === 'ICFES' && puntajeIcfes >= puntajeMeta && puntajeIcfes > 0) {
+      setMostrarCelebracion(true);
+    }
+
+    const reporteDetallado = preguntas.map((p) => {
+      const seleccionada = respuestasFinales[p.id] || 'Ninguna';
+      return {
+        pregunta: p.texto_pregunta,
+        materia: p.materia,
+        correcta: p.respuesta_correcta,
+        seleccionada: seleccionada,
+        justificacion: p.justificacion
+      };
+    });
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -123,10 +150,12 @@ const finalizarExamen = async () => {
     setCargando(false);
     setExamenTerminado(true);
   };
-  const calcularPuntaje = () => {
+  const calcularPuntaje = (respuestasFinales = respuestasUsuario) => {
     let correctas = 0;
     preguntas.forEach((preg) => {
-      if (respuestasUsuario[preg.id] === preg.respuesta_correcta) {
+      const seleccionada = respuestasFinales[preg.id] || 'Ninguna';
+      if (seleccionada !== 'Ninguna' && 
+          seleccionada.trim().toUpperCase() === String(preg.respuesta_correcta || '').trim().toUpperCase()) {
         correctas++;
       }
     });
@@ -157,6 +186,7 @@ const finalizarExamen = async () => {
   if (examenTerminado) {
     const correctas = calcularPuntaje();
     return (
+      <>
       <SafeAreaView style={estilos.areaSegura}>
         <View style={estilos.pantallaCentrada}>
           <Ionicons name="trophy" size={80} color="#F59E0B" />
@@ -173,6 +203,13 @@ const finalizarExamen = async () => {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+      <CelebracionMeta 
+        visible={mostrarCelebracion} 
+        onClose={() => setMostrarCelebracion(false)} 
+        puntaje={puntajeFinal} 
+        meta={puntajeMeta} 
+      />
+    </>
     );
   }
 
